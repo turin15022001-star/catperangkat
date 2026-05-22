@@ -1,342 +1,189 @@
-<script>
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAT Perangkat Desa</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'DM Sans', sans-serif; }
+        .glass { background: rgba(255,255,255,0.15); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.25); }
+        .page { display: none; }
+        .page.active { display: block; }
+        .answer-option { transition: all 0.2s; border: 2px solid #e5e7eb; }
+        .answer-option:hover { transform: translateY(-2px); border-color: #3b82f6; }
+        .answer-option.selected { border-color: #1d4ed8; background: #eff6ff; }
+        .q-num { transition: all 0.2s; cursor: pointer; }
+        .q-num.active { background: #1d4ed8 !important; color: white !important; }
+        .q-num.answered { background: #16a34a; color: white; }
+        .q-num.doubt { background: #f59e0b; color: white; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50">
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxx2HVK41U2UFXp28oNpXwcKTGZ68qnflQQP9RQbTDQhrnLACMHhJ1wtmCTQ92g3elp/exec";
-
-let soalData = [];
-let currentQ = 0;
-let answers = [];
-let doubts = new Set();
-let timerInterval;
-
-// ======================
-// NAVIGATION
-// ======================
-
-function showPage(name) {
-
-    document.querySelectorAll('.page')
-    .forEach(p => p.classList.remove('active'));
-
-    document.getElementById('page-' + name)
-    .classList.add('active');
-
-    window.scrollTo(0,0);
-
-    if(name === 'exam'){
-        loadSoal();
-    }
-
-}
-
-// ======================
-// LOGIN
-// ======================
-
-async function loginUser(event){
-
-    event.preventDefault();
-
-    const email = document.getElementById("login-email").value;
-    const password = document.getElementById("login-pass").value;
-
-    try{
-
-        const response = await fetch(
-            `${API_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
-        );
-
-        const data = await response.json();
-
-        if(data.success){
-
-            alert("Login berhasil");
-
-            showPage("dashboard");
-
-        }else{
-
-            alert("Email atau password salah");
-
-        }
-
-    }catch(err){
-
-        alert("Gagal koneksi ke server");
-
-        console.log(err);
-
-    }
-
-}
-
-// ======================
-// LOAD SOAL
-// ======================
-
-async function loadSoal(){
-
-    try{
-
-        const response = await fetch(
-            `${API_URL}?action=getSoal`
-        );
-
-        soalData = await response.json();
-
-        if(!Array.isArray(soalData)){
-
-            alert("Data soal gagal dimuat");
-
-            return;
-
-        }
-
-        answers = new Array(soalData.length).fill(-1);
-
-        initQuestionGrid();
-
-        tampilkanSoal();
-
-        startTimer();
-
-    }catch(err){
-
-        alert("Gagal mengambil soal");
-
-        console.log(err);
-
-    }
-
-}
-
-// ======================
-// TAMPILKAN SOAL
-// ======================
-
-function tampilkanSoal(){
-
-    const soal = soalData[currentQ];
-
-    document.getElementById("exam-q-num").innerText = currentQ + 1;
-
-    document.getElementById("exam-question").innerText = soal.soal;
-
-    document.getElementById("exam-options").innerHTML = `
-
-        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
-        onclick="jawab(0,this)">
-        <span class="font-bold text-blue-700">A.</span> ${soal.A}
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md shadow-sm z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <h1 class="text-xl font-bold text-blue-700 cursor-pointer" onclick="showPage('home')">CAT Perangkat Desa</h1>
+            <div class="hidden md:flex gap-6 text-sm font-medium">
+                <a onclick="showPage('home')" class="cursor-pointer hover:text-blue-600">Home</a>
+                <a onclick="showPage('dashboard')" class="cursor-pointer hover:text-blue-600">Dashboard</a>
+                <a onclick="showPage('exam')" class="cursor-pointer hover:text-blue-600">Tryout</a>
+                <a onclick="showPage('premium')" class="cursor-pointer hover:text-blue-600">Premium</a>
+            </div>
+            <button class="bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-800" onclick="showPage('login')">Masuk</button>
         </div>
+    </nav>
 
-        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
-        onclick="jawab(1,this)">
-        <span class="font-bold text-blue-700">B.</span> ${soal.B}
+    <div id="page-home" class="page active pt-16">
+        <section class="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white">
+            <div class="max-w-7xl mx-auto px-4 py-20 md:py-28 grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-4xl font-bold leading-tight">Platform Latihan CAT Perangkat Desa</h2>
+                    <p class="mt-4 text-blue-100 text-lg">Latihan soal terbaru, simulasi real time, dan pembahasan lengkap.</p>
+                    <div class="flex flex-wrap gap-3 mt-8">
+                        <button class="bg-white text-blue-700 px-6 py-3 rounded-xl font-semibold" onclick="showPage('exam')">Mulai Trial Gratis</button>
+                        <button class="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold" onclick="showPage('premium')">Masuk Premium</button>
+                    </div>
+                </div>
+                <div class="flex justify-center">
+                    <img class="w-full max-w-md rounded-2xl shadow-2xl" src="https://images.pexels.com/photos/6958518/pexels-photo-6958518.jpeg?auto=compress&cs=tinysrgb&w=800">
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="page-exam" class="page pt-16">
+        <div class="min-h-screen bg-gray-100">
+            <div class="bg-white shadow-sm px-4 py-3 flex items-center justify-between">
+                <h3 class="font-semibold text-gray-800">Tryout CAT - Paket Soal Sheets</h3>
+                <div id="exam-timer" class="bg-red-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm">00:00:00</div>
+            </div>
+            <div class="max-w-7xl mx-auto p-4 grid lg:grid-cols-[1fr_300px] gap-4">
+                <div id="exam-container" class="bg-white rounded-xl shadow-sm p-6">
+                    <div id="loading-state" class="text-center py-10">Memuat soal dari Google Sheets...</div>
+                    <div id="quiz-content" class="hidden">
+                        <p class="text-sm text-gray-500 mb-2">Soal <span id="exam-q-num">1</span></p>
+                        <p id="exam-question" class="text-gray-900 text-lg font-medium leading-relaxed mb-6">...</p>
+                        <div id="exam-options" class="space-y-3">
+                            </div>
+                        <div class="flex flex-wrap gap-3 mt-8">
+                            <button onclick="prevQ()" class="bg-gray-200 px-5 py-2.5 rounded-lg font-medium">← Sebelumnya</button>
+                            <button onclick="nextQ()" class="bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium">Selanjutnya →</button>
+                            <button onclick="toggleDoubt()" class="bg-yellow-500 text-white px-5 py-2.5 rounded-lg font-medium">Ragu-ragu</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-4">
+                    <p class="text-sm font-semibold text-gray-700 mb-3">Nomor Soal</p>
+                    <div id="exam-q-grid" class="grid grid-cols-5 gap-2"></div>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
-        onclick="jawab(2,this)">
-        <span class="font-bold text-blue-700">C.</span> ${soal.C}
-        </div>
+    <div id="page-login" class="page pt-32 text-center text-2xl font-bold">Halaman Login (Gunakan Desain Canva Anda)</div>
+    <div id="page-dashboard" class="page pt-32 text-center text-2xl font-bold">Halaman Dashboard</div>
+    <div id="page-premium" class="page pt-32 text-center text-2xl font-bold">Halaman Premium</div>
 
-        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
-        onclick="jawab(3,this)">
-        <span class="font-bold text-blue-700">D.</span> ${soal.D}
-        </div>
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxx2HVK41U2UFXp28oNpXwcKTGZ68qnflQQP9RQbTDQhrnLACMHhJ1wtmCTQ92g3elp/exec';
+        let questions = [];
+        let currentQ = 0;
+        let userAnswers = {};
+        let doubts = new Set();
 
-        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
-        onclick="jawab(4,this)">
-        <span class="font-bold text-blue-700">E.</span> ${soal.E}
-        </div>
-
-    `;
-
-    updateSelected();
-
-    updateQGrid();
-
-}
-
-// ======================
-// PILIH JAWABAN
-// ======================
-
-function jawab(index, el){
-
-    answers[currentQ] = index;
-
-    updateSelected();
-
-    updateQGrid();
-
-}
-
-function updateSelected(){
-
-    document.querySelectorAll('.answer-option')
-    .forEach((o,i)=>{
-
-        o.classList.remove('selected');
-
-        if(answers[currentQ] === i){
-            o.classList.add('selected');
+        function showPage(name) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + name).classList.add('active');
+            if (name === 'exam') loadSoal();
         }
 
-    });
-
-}
-
-// ======================
-// GRID NOMOR SOAL
-// ======================
-
-function initQuestionGrid(){
-
-    const grid = document.getElementById("exam-q-grid");
-
-    if(grid.children.length > 0) return;
-
-    for(let i=0;i<soalData.length;i++){
-
-        const btn = document.createElement("button");
-
-        btn.className =
-        "q-num w-8 h-8 rounded text-xs font-semibold border border-gray-200 flex items-center justify-center";
-
-        btn.innerText = i + 1;
-
-        btn.onclick = ()=>{
-
-            currentQ = i;
-
-            tampilkanSoal();
-
-        };
-
-        grid.appendChild(btn);
-
-    }
-
-}
-
-function updateQGrid(){
-
-    document.querySelectorAll('.q-num')
-    .forEach((btn,i)=>{
-
-        btn.className =
-        "q-num w-8 h-8 rounded text-xs font-semibold flex items-center justify-center cursor-pointer";
-
-        if(i === currentQ){
-
-            btn.classList.add('active');
-
-        }else if(doubts.has(i)){
-
-            btn.classList.add('doubt');
-
-        }else if(answers[i] >= 0){
-
-            btn.classList.add('answered');
-
-        }else{
-
-            btn.classList.add('border','border-gray-200');
-
+        async function loadSoal() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                questions = await response.json();
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('quiz-content').classList.remove('hidden');
+                initGrid();
+                renderQuestion();
+                startTimer(90); // 90 menit
+            } catch (error) {
+                document.getElementById('loading-state').textContent = "Gagal memuat soal. Pastikan Apps Script sudah di-deploy sebagai 'Anyone'.";
+            }
         }
 
-    });
-
-}
-
-// ======================
-// TIMER
-// ======================
-
-function startTimer(){
-
-    if(timerInterval) return;
-
-    let seconds = 5400;
-
-    timerInterval = setInterval(()=>{
-
-        seconds--;
-
-        if(seconds <= 0){
-
-            clearInterval(timerInterval);
-
-            alert("Waktu habis");
-
-            return;
-
+        function initGrid() {
+            const grid = document.getElementById('exam-q-grid');
+            grid.innerHTML = '';
+            questions.forEach((_, i) => {
+                const btn = document.createElement('button');
+                btn.id = `grid-num-${i}`;
+                btn.className = 'q-num w-10 h-10 rounded text-xs font-semibold border border-gray-200 flex items-center justify-center';
+                btn.textContent = i + 1;
+                btn.onclick = () => { currentQ = i; renderQuestion(); };
+                grid.appendChild(btn);
+            });
+            updateGridStyles();
         }
 
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
+        function renderQuestion() {
+            const q = questions[currentQ];
+            document.getElementById('exam-q-num').textContent = currentQ + 1;
+            document.getElementById('exam-question').textContent = q.pertanyaan;
 
-        document.getElementById("exam-timer").innerText =
-        `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            const optionsContainer = document.getElementById('exam-options');
+            optionsContainer.innerHTML = '';
 
-    },1000);
-
-}
-
-// ======================
-// BUTTON NEXT PREV
-// ======================
-
-document.addEventListener("DOMContentLoaded",()=>{
-
-    lucide.createIcons();
-
-    document.querySelector("form")
-    .addEventListener("submit", loginUser);
-
-    document.querySelector('[data-template-id="exam-btn-next"]')
-    .addEventListener("click",()=>{
-
-        if(currentQ < soalData.length - 1){
-
-            currentQ++;
-
-            tampilkanSoal();
-
+            // Asumsi kolom di Sheet: a, b, c, d
+            ['a', 'b', 'c', 'd'].forEach((optKey) => {
+                const optText = q[optKey];
+                const div = document.createElement('div');
+                div.className = `answer-option p-4 rounded-xl cursor-pointer ${userAnswers[currentQ] === optKey ? 'selected' : ''}`;
+                div.innerHTML = `<span class="font-bold mr-2 uppercase">${optKey}.</span> ${optText}`;
+                div.onclick = () => {
+                    userAnswers[currentQ] = optKey;
+                    renderQuestion();
+                    updateGridStyles();
+                };
+                optionsContainer.appendChild(div);
+            });
+            updateGridStyles();
         }
 
-    });
-
-    document.querySelector('[data-template-id="exam-btn-prev"]')
-    .addEventListener("click",()=>{
-
-        if(currentQ > 0){
-
-            currentQ--;
-
-            tampilkanSoal();
-
+        function nextQ() { if (currentQ < questions.length - 1) { currentQ++; renderQuestion(); } }
+        function prevQ() { if (currentQ > 0) { currentQ--; renderQuestion(); } }
+        function toggleDoubt() {
+            if (doubts.has(currentQ)) doubts.delete(currentQ);
+            else doubts.add(currentQ);
+            updateGridStyles();
         }
 
-    });
-
-    document.querySelector('[data-template-id="exam-btn-doubt"]')
-    .addEventListener("click",()=>{
-
-        if(doubts.has(currentQ)){
-
-            doubts.delete(currentQ);
-
-        }else{
-
-            doubts.add(currentQ);
-
+        function updateGridStyles() {
+            questions.forEach((_, i) => {
+                const btn = document.getElementById(`grid-num-${i}`);
+                if (!btn) return;
+                btn.classList.remove('active', 'answered', 'doubt');
+                if (i === currentQ) btn.classList.add('active');
+                if (doubts.has(i)) btn.classList.add('doubt');
+                else if (userAnswers[i]) btn.classList.add('answered');
+            });
         }
 
-        updateQGrid();
+        function startTimer(minutes) {
+            let time = minutes * 60;
+            const timerEl = document.getElementById('exam-timer');
+            const interval = setInterval(() => {
+                const m = Math.floor(time / 60);
+                const s = time % 60;
+                timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                if (time <= 0) clearInterval(interval);
+                time--;
+            }, 1000);
+        }
 
-    });
-
-});
-
-</script>
+        document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+    </script>
+</body>
+</html>
