@@ -1,0 +1,342 @@
+<script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycbxx2HVK41U2UFXp28oNpXwcKTGZ68qnflQQP9RQbTDQhrnLACMHhJ1wtmCTQ92g3elp/exec";
+
+let soalData = [];
+let currentQ = 0;
+let answers = [];
+let doubts = new Set();
+let timerInterval;
+
+// ======================
+// NAVIGATION
+// ======================
+
+function showPage(name) {
+
+    document.querySelectorAll('.page')
+    .forEach(p => p.classList.remove('active'));
+
+    document.getElementById('page-' + name)
+    .classList.add('active');
+
+    window.scrollTo(0,0);
+
+    if(name === 'exam'){
+        loadSoal();
+    }
+
+}
+
+// ======================
+// LOGIN
+// ======================
+
+async function loginUser(event){
+
+    event.preventDefault();
+
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-pass").value;
+
+    try{
+
+        const response = await fetch(
+            `${API_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+        );
+
+        const data = await response.json();
+
+        if(data.success){
+
+            alert("Login berhasil");
+
+            showPage("dashboard");
+
+        }else{
+
+            alert("Email atau password salah");
+
+        }
+
+    }catch(err){
+
+        alert("Gagal koneksi ke server");
+
+        console.log(err);
+
+    }
+
+}
+
+// ======================
+// LOAD SOAL
+// ======================
+
+async function loadSoal(){
+
+    try{
+
+        const response = await fetch(
+            `${API_URL}?action=getSoal`
+        );
+
+        soalData = await response.json();
+
+        if(!Array.isArray(soalData)){
+
+            alert("Data soal gagal dimuat");
+
+            return;
+
+        }
+
+        answers = new Array(soalData.length).fill(-1);
+
+        initQuestionGrid();
+
+        tampilkanSoal();
+
+        startTimer();
+
+    }catch(err){
+
+        alert("Gagal mengambil soal");
+
+        console.log(err);
+
+    }
+
+}
+
+// ======================
+// TAMPILKAN SOAL
+// ======================
+
+function tampilkanSoal(){
+
+    const soal = soalData[currentQ];
+
+    document.getElementById("exam-q-num").innerText = currentQ + 1;
+
+    document.getElementById("exam-question").innerText = soal.soal;
+
+    document.getElementById("exam-options").innerHTML = `
+
+        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
+        onclick="jawab(0,this)">
+        <span class="font-bold text-blue-700">A.</span> ${soal.A}
+        </div>
+
+        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
+        onclick="jawab(1,this)">
+        <span class="font-bold text-blue-700">B.</span> ${soal.B}
+        </div>
+
+        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
+        onclick="jawab(2,this)">
+        <span class="font-bold text-blue-700">C.</span> ${soal.C}
+        </div>
+
+        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
+        onclick="jawab(3,this)">
+        <span class="font-bold text-blue-700">D.</span> ${soal.D}
+        </div>
+
+        <div class="answer-option border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer"
+        onclick="jawab(4,this)">
+        <span class="font-bold text-blue-700">E.</span> ${soal.E}
+        </div>
+
+    `;
+
+    updateSelected();
+
+    updateQGrid();
+
+}
+
+// ======================
+// PILIH JAWABAN
+// ======================
+
+function jawab(index, el){
+
+    answers[currentQ] = index;
+
+    updateSelected();
+
+    updateQGrid();
+
+}
+
+function updateSelected(){
+
+    document.querySelectorAll('.answer-option')
+    .forEach((o,i)=>{
+
+        o.classList.remove('selected');
+
+        if(answers[currentQ] === i){
+            o.classList.add('selected');
+        }
+
+    });
+
+}
+
+// ======================
+// GRID NOMOR SOAL
+// ======================
+
+function initQuestionGrid(){
+
+    const grid = document.getElementById("exam-q-grid");
+
+    if(grid.children.length > 0) return;
+
+    for(let i=0;i<soalData.length;i++){
+
+        const btn = document.createElement("button");
+
+        btn.className =
+        "q-num w-8 h-8 rounded text-xs font-semibold border border-gray-200 flex items-center justify-center";
+
+        btn.innerText = i + 1;
+
+        btn.onclick = ()=>{
+
+            currentQ = i;
+
+            tampilkanSoal();
+
+        };
+
+        grid.appendChild(btn);
+
+    }
+
+}
+
+function updateQGrid(){
+
+    document.querySelectorAll('.q-num')
+    .forEach((btn,i)=>{
+
+        btn.className =
+        "q-num w-8 h-8 rounded text-xs font-semibold flex items-center justify-center cursor-pointer";
+
+        if(i === currentQ){
+
+            btn.classList.add('active');
+
+        }else if(doubts.has(i)){
+
+            btn.classList.add('doubt');
+
+        }else if(answers[i] >= 0){
+
+            btn.classList.add('answered');
+
+        }else{
+
+            btn.classList.add('border','border-gray-200');
+
+        }
+
+    });
+
+}
+
+// ======================
+// TIMER
+// ======================
+
+function startTimer(){
+
+    if(timerInterval) return;
+
+    let seconds = 5400;
+
+    timerInterval = setInterval(()=>{
+
+        seconds--;
+
+        if(seconds <= 0){
+
+            clearInterval(timerInterval);
+
+            alert("Waktu habis");
+
+            return;
+
+        }
+
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+
+        document.getElementById("exam-timer").innerText =
+        `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+    },1000);
+
+}
+
+// ======================
+// BUTTON NEXT PREV
+// ======================
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+    lucide.createIcons();
+
+    document.querySelector("form")
+    .addEventListener("submit", loginUser);
+
+    document.querySelector('[data-template-id="exam-btn-next"]')
+    .addEventListener("click",()=>{
+
+        if(currentQ < soalData.length - 1){
+
+            currentQ++;
+
+            tampilkanSoal();
+
+        }
+
+    });
+
+    document.querySelector('[data-template-id="exam-btn-prev"]')
+    .addEventListener("click",()=>{
+
+        if(currentQ > 0){
+
+            currentQ--;
+
+            tampilkanSoal();
+
+        }
+
+    });
+
+    document.querySelector('[data-template-id="exam-btn-doubt"]')
+    .addEventListener("click",()=>{
+
+        if(doubts.has(currentQ)){
+
+            doubts.delete(currentQ);
+
+        }else{
+
+            doubts.add(currentQ);
+
+        }
+
+        updateQGrid();
+
+    });
+
+});
+
+</script>
