@@ -214,3 +214,40 @@
     </script>
 </body>
 </html>
+
+async function loadSoal() {
+    try {
+        // Tambahkan cache: 'no-cache' agar data selalu segar
+        const response = await fetch(SCRIPT_URL, {
+            method: 'GET',
+            redirect: 'follow' 
+        });
+        
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        allQuestions = await response.json();
+        
+        if (allQuestions.error) {
+            document.getElementById('loading-state').textContent = "Error: " + allQuestions.error;
+            return;
+        }
+
+        // Filter soal untuk Trial/Premium
+        questions = isPremium ? allQuestions : allQuestions.slice(0, 50);
+        document.getElementById('exam-title').textContent = isPremium ? "Tryout Premium" : "Tryout Trial (50 Soal)";
+
+        document.getElementById('loading-state').classList.add('hidden');
+        document.getElementById('quiz-content').classList.remove('hidden');
+        initGrid();
+        renderQuestion();
+        startTimer(90);
+    } catch (error) {
+        console.error("Fetch error:", error);
+        document.getElementById('loading-state').innerHTML = 
+            `<div class="text-red-500">
+                <p>Gagal memuat soal.</p>
+                <p class="text-xs mt-2">Pesan: ${error.message}</p>
+                <button onclick="loadSoal()" class="mt-4 bg-blue-600 text-white px-4 py-1 rounded">Coba Lagi</button>
+            </div>`;
+    }
+}
